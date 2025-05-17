@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:job_swaipe/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:job_swaipe/screens/review_resume_page.dart';
+import 'package:job_swaipe/screens/community/community_screen.dart';
 
 class JobListing {
   final String id;
@@ -47,11 +48,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   // List of pages to navigate to
-  static List<Widget> _pages = <Widget>[
+  final List<Widget> _pages = const <Widget>[
     ComingSoonPage(pageName: 'Home'), // Placeholder for actual Home content
     const ReviewResumePage(), // Navigate to ReviewResumePage
     ComingSoonPage(pageName: 'Explore'),
-    ComingSoonPage(pageName: 'Community'),
+    CommunityScreen(), // Use our new CommunityScreen
   ];
 
   @override
