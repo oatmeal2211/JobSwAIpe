@@ -43,7 +43,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<JobListing> _jobListings = [];
   bool _isLoading = true;
-  int _currentIndex = 0;
+  int _selectedIndex = 0;
+
+  // List of pages to navigate to
+  static const List<Widget> _pages = <Widget>[
+    ComingSoonPage(pageName: 'Home'), // Placeholder for actual Home content
+    ComingSoonPage(pageName: 'Resume Review'),
+    ComingSoonPage(pageName: 'Explore'),
+    ComingSoonPage(pageName: 'Community'),
+  ];
 
   @override
   void initState() {
@@ -77,19 +85,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _signOut() async {
-    try {
-      await _authService.signOut();
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error signing out: ${e.toString()}')),
-        );
-      }
-    }
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
@@ -99,53 +98,51 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('JobSwAIpe'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              // Navigate to a profile page or show a profile dialog
+              // For now, let's keep it simple or integrate with _buildProfileSection if desired
+              // This could be a 5th item in BottomNav or an AppBar action
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Profile button clicked! Implement navigation.')),
+              );
+            },
+          ),
+          IconButton( // Added sign out button to AppBar for easier access
             icon: const Icon(Icons.logout),
             onPressed: _signOut,
-            tooltip: 'Sign Out',
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _jobListings.isEmpty
-              ? const Center(child: Text('No jobs available'))
-              : _buildContent(),
+      body: Center( // Ensures the ComingSoonPage content is centered
+        child: _pages.elementAt(_selectedIndex),
+      ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
+        items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.work),
-            label: 'Jobs',
+            icon: Icon(Icons.home),
+            label: 'HOME',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Saved',
+            icon: Icon(Icons.assignment), // Example icon for Resume Review
+            label: 'RESUME REVIEW',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+            icon: Icon(Icons.explore), // Example icon for Explore
+            label: 'EXPLORE',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.group), // Example icon for Community
+            label: 'COMMUNITY',
           ),
         ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Theme.of(context).colorScheme.primary, // Color for selected item
+        unselectedItemColor: Colors.grey, // Color for unselected items
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed, // Ensures all labels are visible
       ),
     );
-  }
-
-  Widget _buildContent() {
-    switch (_currentIndex) {
-      case 0:
-        return _buildJobsList();
-      case 1:
-        return const Center(child: Text('Saved Jobs (Coming Soon)'));
-      case 2:
-        return _buildProfileSection();
-      default:
-        return _buildJobsList();
-    }
   }
 
   Widget _buildJobsList() {
@@ -198,7 +195,8 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           const CircleAvatar(
             radius: 50,
-            child: Icon(Icons.person, size: 50),
+            backgroundImage: NetworkImage("https://example.com/user_avatar.png"), // Placeholder for user image
+            child: Icon(Icons.person, size: 50, color: Colors.white), // Fallback icon
           ),
           const SizedBox(height: 16),
           Text(
@@ -303,6 +301,38 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         );
       },
+    );
+  }
+
+  Future<void> _signOut() async {
+    try {
+      await _authService.signOut();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error signing out: ${e.toString()}')),
+        );
+      }
+    }
+  }
+}
+
+// A simple page to show that the page is coming soon
+class ComingSoonPage extends StatelessWidget {
+  final String pageName;
+
+  const ComingSoonPage({super.key, required this.pageName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        '$pageName is coming soon!',
+        style: const TextStyle(fontSize: 24),
+      ),
     );
   }
 } 
