@@ -75,7 +75,24 @@ Please structure your JSON output as follows:
       ]
     }
     // ... more sections ...
-  ]
+  ],
+  "general_resume_suggestions": {
+    "grammar_and_phrasing": [
+      "<suggestion_for_grammar_or_phrasing_improvement_1>",
+      "<suggestion_2>"
+    ],
+    "formatting": [
+      "<suggestion_for_formatting_improvement_1>",
+      "<suggestion_2>"
+    ],
+    "missing_information": [
+      "<suggestion_for_potentially_missing_information_or_section_1>",
+      "<suggestion_2>"
+    ],
+    "other_suggestions": [
+      "<any_other_general_suggestion_to_improve_the_resume_1>"
+    ]
+  }
 }
 
 Ensure the final output is ONLY the JSON object itself, without any surrounding text, explanations, or markdown formatting.

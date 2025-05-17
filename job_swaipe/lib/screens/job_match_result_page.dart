@@ -148,9 +148,56 @@ class JobMatchResultPage extends StatelessWidget {
                     ...sectionAnalysis.map((section) => _buildSectionAnalysisCard(context, section as Map<String, dynamic>))
                   else
                     const Center(child: Padding(padding: EdgeInsets.all(16.0), child: Text('No detailed section analysis available.'))),
+                  
+                  // Display General Resume Suggestions
+                  if (analysisData.containsKey('general_resume_suggestions')) ...[
+                    const Divider(height: 32, thickness: 1),
+                    _buildSectionTitle(context, 'General Resume Suggestions'),
+                    _buildGeneralSuggestionsCard(context, analysisData['general_resume_suggestions'] as Map<String, dynamic>?),
+                  ]
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildGeneralSuggestionsList(BuildContext context, String title, List<dynamic>? suggestions) {
+    if (suggestions == null || suggestions.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          ...suggestions.map((s) => Padding(
+            padding: const EdgeInsets.only(left: 8.0, bottom: 2.0),
+            child: Text('• $s', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 15)),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGeneralSuggestionsCard(BuildContext context, Map<String, dynamic>? suggestionsData) {
+    if (suggestionsData == null || suggestionsData.isEmpty) {
+      return const Center(child: Padding(padding: EdgeInsets.all(16.0), child: Text('No general resume suggestions available.')));
+    }
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildGeneralSuggestionsList(context, 'Grammar and Phrasing', suggestionsData['grammar_and_phrasing'] as List<dynamic>?),
+            _buildGeneralSuggestionsList(context, 'Formatting', suggestionsData['formatting'] as List<dynamic>?),
+            _buildGeneralSuggestionsList(context, 'Missing Information', suggestionsData['missing_information'] as List<dynamic>?),
+            _buildGeneralSuggestionsList(context, 'Other Suggestions', suggestionsData['other_suggestions'] as List<dynamic>?),
+          ],
+        ),
+      ),
     );
   }
 } 
