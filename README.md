@@ -1,6 +1,6 @@
 # JobSwAIpe
 
-A Flutter job search application with Firebase integration.
+A Flutter job search application with Firebase and Alibaba Cloud OSS integration.
 
 ## Overview
 
@@ -10,6 +10,7 @@ JobSwAIpe is a modern job search application built with Flutter and Firebase. Th
 - View detailed job information
 - Save favorite jobs
 - Manage their profile
+- Upload profile pictures and resumes using Alibaba Cloud OSS
 
 ## Getting Started
 
@@ -37,7 +38,18 @@ The complete application is located in the `job_swaipe` directory. Please follow
    - Enable Email/Password authentication in Firebase console
    - Set up Firestore database with a "jobs" collection
 
-4. Run the app:
+4. Set up Alibaba Cloud OSS:
+   - Create an Alibaba Cloud account and set up an OSS bucket
+   - Create a `.env` file in the root of the `job_swaipe` directory with the following content:
+     ```
+     ALIBABA_OSS_ENDPOINT=your-endpoint.aliyuncs.com
+     ALIBABA_OSS_ACCESS_KEY_ID=your-access-key-id
+     ALIBABA_OSS_ACCESS_KEY_SECRET=your-access-key-secret
+     ALIBABA_OSS_BUCKET_NAME=your-bucket-name
+     ALIBABA_OSS_SECURITY_TOKEN=your-security-token  # Optional
+     ```
+
+5. Run the app:
    ```bash
    flutter run
    ```
@@ -49,13 +61,15 @@ The complete application is located in the `job_swaipe` directory. Please follow
 - **Job Details**: View comprehensive job information
 - **User Profile**: Basic profile management
 - **Favorites**: Save jobs for later (UI implementation)
+- **File Storage**: Upload and manage files using Alibaba Cloud OSS
 
 ## Technologies Used
 
 - Flutter
 - Firebase Authentication
 - Cloud Firestore
-- Material Design
+- Alibaba Cloud OSS
+- Material Design 3
 
 ## Screenshots
 
