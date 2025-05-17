@@ -38,6 +38,12 @@ dependencies:
   firebase_auth: ^5.5.3
   cloud_firestore: ^5.6.7
   flutter_dotenv: ^5.2.1
+  image_picker: ^0.8.4+4
+  http: ^0.13.3
+  base64: 1.0.0
+  file_picker: ^10.1.9
+  pdfx: ^2.9.1 # For rendering PDF to image
+  flutter_markdown: ^0.7.1 # For rendering Markdown content
 
 dev_dependencies:
   flutter_test:
