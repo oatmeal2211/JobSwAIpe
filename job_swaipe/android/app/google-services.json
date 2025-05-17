@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "104069741954",
+    "project_id": "jobswaipe-273cb",
+    "storage_bucket": "jobswaipe-273cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:104069741954:android:105088f433183c008fa39b",
+        "android_client_info": {
+          "package_name": "com.jobswaipe.job_swaipe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDr0wOpbYxpLdS3_bcdeUUdbfG33OJ3LIY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
