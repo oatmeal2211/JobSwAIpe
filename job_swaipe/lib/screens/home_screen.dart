@@ -102,12 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              // Navigate to a profile page or show a profile dialog
-              // For now, let's keep it simple or integrate with _buildProfileSection if desired
-              // This could be a 5th item in BottomNav or an AppBar action
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile button clicked! Implement navigation.')),
-              );
+              Navigator.pushNamed(context, '/profile');
             },
           ),
           IconButton( // Added sign out button to AppBar for easier access
