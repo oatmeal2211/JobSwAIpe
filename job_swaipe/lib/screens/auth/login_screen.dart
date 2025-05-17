@@ -56,9 +56,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('JobSwAIpe - Login'),
-      ),
+      // Remove the AppBar
+      // appBar: AppBar(
+      //   title: const Text('JobSwAIpe - Login'),
+      // ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -68,10 +69,10 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(
-                  Icons.work,
-                  size: 80,
-                  color: Colors.blue,
+                Image.asset(
+                  'assets/images/jobswaipe_logo.png', // Replace with your image file name
+                  width: 80, // Adjust the width as needed
+                  height: 80, // Adjust the height as needed
                 ),
                 const SizedBox(height: 32),
                 const Text(
@@ -146,6 +147,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pushNamed(context, '/register');
                   },
                   child: const Text('Don\'t have an account? Register'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushReplacementNamed(context, '/home');
+                  },
+                  child: const Text('Continue to Home (Guest)'),
                 ),
               ],
             ),
