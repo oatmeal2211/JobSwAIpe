@@ -1,6 +1,6 @@
 # JobSwAIpe
 
-A Flutter job search application with Firebase integration.
+A Flutter job search application with Firebase, Alibaba Cloud Model Studio and Qwen integration.
 
 ## Overview
 
