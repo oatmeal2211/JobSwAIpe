@@ -130,7 +130,7 @@ Ensure the final output is ONLY the JSON object itself, without any surrounding 
     ;
 
     final Map<String, dynamic> payload = {
-      'model': 'qwen-vl-max', 
+      'model': 'qwen-vl-max-latest', 
       'messages': [
         {
           'role': 'user',
