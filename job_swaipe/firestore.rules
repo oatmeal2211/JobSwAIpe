@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Company Reviews Rules
+    match /company_reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth.uid == resource.data.userId;
+      
+      // Ensure proper indexing for queries
+      allow list: if 
+        request.query.orderBy.hasAny(['companyId', 'createdAt']) &&
+        request.query.limit <= 50;
+    }
+    
+    // Companies Collection Rules
+    match /companies/{companyId} {
+      allow read: if true;
+      allow write: if request.auth.token.email_verified == true;
+    }
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 
