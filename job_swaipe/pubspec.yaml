@@ -86,7 +86,6 @@ flutter:
     - assets/images/avatar_placeholder.jpg
     - job_data.json
     - assets/data/jobstreet_all_jobs.json
-    - jobstreet_all_jobs.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
