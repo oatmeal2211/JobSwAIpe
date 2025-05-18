@@ -6,6 +6,9 @@ import 'package:job_swaipe/screens/review_resume_page.dart';
 import 'package:job_swaipe/screens/community/community_screen.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class JobListing {
   final String id;
@@ -602,145 +605,356 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class JobCard extends StatelessWidget {
+class JobCard extends StatefulWidget {
   final JobListing job;
   const JobCard({super.key, required this.job});
+
+  @override
+  State<JobCard> createState() => _JobCardState();
+}
+
+class _JobCardState extends State<JobCard> {
+  String? _matchPercentage;
+  String? _matchReasoning;
+  bool _isMatchingLoading = true;
+  String? _matchError;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchJobMatchDetails();
+  }
+
+  Future<void> _fetchJobMatchDetails() async {
+    if (!mounted) return;
+    setState(() {
+      _isMatchingLoading = true;
+      _matchError = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final resumeJsonString = prefs.getString('saved_resume_json');
+
+      if (resumeJsonString == null || resumeJsonString.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _matchPercentage = null;
+            _matchReasoning = "Save your resume to see match insights!";
+            _isMatchingLoading = false;
+          });
+        }
+        return;
+      }
+      
+      // Validate resumeJsonString is valid JSON before parsing
+      try {
+        jsonDecode(resumeJsonString); // Try to parse to check validity
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _matchError = "Error: Saved resume data is corrupted. Please re-save.";
+            _isMatchingLoading = false;
+          });
+        }
+        return;
+      }
+
+
+      final apiKey = dotenv.env['DASHSCOPE_API_KEY'];
+      if (apiKey == null) {
+        throw Exception('DASHSCOPE_API_KEY not found in .env file');
+      }
+
+      final prompt = """
+Given the following resume in JSON format:
+<resume_json>
+$resumeJsonString
+</resume_json>
+
+And the following job details:
+<job_details>
+Title: ${widget.job.title}
+Company: ${widget.job.company}
+Description: ${widget.job.description}
+Location: ${widget.job.location}
+Salary: ${widget.job.salary}
+Benefits: ${widget.job.benefits ?? 'Not specified'}
+Job Type: ${widget.job.jobType ?? 'Not specified'}
+</job_details>
+
+Please perform the following:
+1. Calculate a match percentage (e.g., "85%").
+2. Provide a concise explanation (2-3 bullet points, Markdown formatted) for this match percentage, highlighting key strengths and potential gaps relevant to the job.
+3. Return ONLY the percentage on the first line, followed by the Markdown explanation. For example:
+85%
+**Reasoning:**
+* Strong alignment in required skills.
+* Relevant project experience.
+""";
+
+      final response = await http.post(
+        Uri.parse('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          'model': 'qwen-plus', // Using qwen-plus
+          'messages': [
+            {'role': 'user', 'content': prompt}
+          ],
+          'stream': false,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(utf8.decode(response.bodyBytes));
+        if (responseBody['choices'] != null && responseBody['choices'].isNotEmpty) {
+          final content = responseBody['choices'][0]['message']['content'] as String;
+          final lines = content.split('\\n');
+          if (mounted) {
+            setState(() {
+              _matchPercentage = lines.isNotEmpty ? lines[0].trim() : "N/A";
+              _matchReasoning = lines.length > 1 ? lines.sublist(1).join('\\n').trim() : "No detailed explanation provided.";
+              _isMatchingLoading = false;
+            });
+          }
+        } else {
+          throw Exception('Failed to parse match details from API response');
+        }
+      } else {
+        final errorBody = jsonDecode(utf8.decode(response.bodyBytes));
+        throw Exception('Failed to get match details: ${response.statusCode} ${errorBody['error']?['message'] ?? response.body}');
+      }
+    } catch (e) {
+      print('Error fetching job match details: $e');
+      if (mounted) {
+        setState(() {
+          _matchError = 'Error: Could not fetch match insights. $e';
+          _matchReasoning = 'Could not load match insights at this time.';
+          _isMatchingLoading = false;
+        });
+      }
+    }
+  }
 
   String _formatPostedDate(String? isoDate) {
     if (isoDate == null || isoDate.isEmpty) return 'N/A';
     try {
-      return isoDate.split('T')[0];
+      final date = DateTime.parse(isoDate);
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     } catch (e) {
-      return isoDate;
+      return isoDate; // return original if parsing fails
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Container(
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                job.title,
-                style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-              if (job.company.isNotEmpty)
-                Text(
-                  job.company,
-                  style: textTheme.titleMedium,
-                ),
-              const SizedBox(height: 3),
-              if (job.location.isNotEmpty)
-                Text(
-                  job.location,
-                  style: textTheme.titleSmall?.copyWith(color: Colors.grey[600]),
-                ),
-              const SizedBox(height: 6),
-              
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // Slightly more rounded
+      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.symmetric(vertical: 8.0), // Add some vertical margin
+      child: Padding(
+        padding: const EdgeInsets.all(16.0), // Increased padding
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Job Title
+            Text(
+              widget.job.title,
+              style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+
+            // Company and Location
+            if (widget.job.company.isNotEmpty || widget.job.location.isNotEmpty)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  if (job.salary.isNotEmpty)
-                    Flexible(
+                  if (widget.job.company.isNotEmpty)
+                    Icon(Icons.business, size: 16, color: textTheme.bodySmall?.color),
+                  if (widget.job.company.isNotEmpty)
+                    const SizedBox(width: 4),
+                  if (widget.job.company.isNotEmpty)
+                    Expanded(
                       child: Text(
-                        'Salary: ${job.salary}',
-                        style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                        widget.job.company,
+                        style: textTheme.titleMedium,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  if (job.jobType != null && job.jobType!.isNotEmpty)
-                    Flexible(
+                  if (widget.job.company.isNotEmpty && widget.job.location.isNotEmpty)
+                     Text(" • ", style: textTheme.titleSmall),
+                  if (widget.job.location.isNotEmpty)
+                    Icon(Icons.location_on, size: 16, color: textTheme.bodySmall?.color),
+                  if (widget.job.location.isNotEmpty)
+                    const SizedBox(width: 4),
+                  if (widget.job.location.isNotEmpty)
+                    Expanded(
                       child: Text(
-                        'Type: ${job.jobType}',
-                        style: textTheme.bodyMedium,
-                        textAlign: job.salary.isNotEmpty ? TextAlign.end : TextAlign.start,
-                         overflow: TextOverflow.ellipsis,
+                        widget.job.location,
+                        style: textTheme.titleSmall?.copyWith(color: Colors.grey[700]),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                 ],
               ),
-              if (job.salary.isNotEmpty || (job.jobType != null && job.jobType!.isNotEmpty))
-                const SizedBox(height: 6),
+            const SizedBox(height: 8),
 
-              if (job.postedDate != null && job.postedDate!.isNotEmpty) ...[
-                Text(
-                  'Posted: ${_formatPostedDate(job.postedDate)}',
-                  style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                ),
-                const SizedBox(height: 8),
-              ],
-              
-              if (job.benefits != null && job.benefits!.isNotEmpty) ...[
-                Text(
-                  'Benefits:',
-                  style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  job.benefits!,
-                  style: textTheme.bodySmall,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis, 
-                ),
-                const SizedBox(height: 8),
-              ],
+            // Salary and Job Type
+            if (widget.job.salary.isNotEmpty || (widget.job.jobType != null && widget.job.jobType!.isNotEmpty))
+              Row(
+                children: [
+                  if (widget.job.salary.isNotEmpty)
+                    Icon(Icons.attach_money, size: 16, color: Colors.green[700]),
+                  if (widget.job.salary.isNotEmpty)
+                    const SizedBox(width: 4),
+                  if (widget.job.salary.isNotEmpty)
+                    Expanded(
+                      child: Text(
+                        widget.job.salary, // Removed "Salary: " prefix as icon implies it
+                        style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                   if (widget.job.salary.isNotEmpty && (widget.job.jobType != null && widget.job.jobType!.isNotEmpty))
+                     const SizedBox(width: 10),
+                  if (widget.job.jobType != null && widget.job.jobType!.isNotEmpty)
+                    Icon(Icons.work_outline, size: 16, color: textTheme.bodySmall?.color),
+                  if (widget.job.jobType != null && widget.job.jobType!.isNotEmpty)
+                    const SizedBox(width: 4),
+                  if (widget.job.jobType != null && widget.job.jobType!.isNotEmpty)
+                    Expanded(
+                      child: Text(
+                        widget.job.jobType!, // Removed "Type: " prefix
+                        style: textTheme.bodyMedium,
+                        textAlign: widget.job.salary.isNotEmpty ? TextAlign.end : TextAlign.start,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+              ),
+            if (widget.job.salary.isNotEmpty || (widget.job.jobType != null && widget.job.jobType!.isNotEmpty))
+              const SizedBox(height: 8),
 
-              if (job.description.isNotEmpty)
-                Flexible(
-                  flex: 2,
-                  child: Column(
-                     mainAxisSize: MainAxisSize.min,
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
-                        Text(
-                          'Description:',
-                          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Expanded(
-                           child: SingleChildScrollView(
-                            child: Text(
-                              job.description,
-                              style: textTheme.bodySmall,
-                            ),
-                          ),
-                        )
-                     ],
-                  )
-                ),
-              if (job.description.isNotEmpty) const SizedBox(height: 12), 
-              
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Theme.of(context).colorScheme.secondaryContainer, width: 1.5)
-                ),
+            // Posted Date
+            if (widget.job.postedDate != null && widget.job.postedDate!.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 14, color: textTheme.bodySmall?.color),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Posted: ${_formatPostedDate(widget.job.postedDate)}',
+                    style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            // Benefits (collapsible or summarized if too long)
+            if (widget.job.benefits != null && widget.job.benefits!.isNotEmpty) ...[
+              Text(
+                'Benefits:',
+                style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                widget.job.benefits!,
+                style: textTheme.bodySmall,
+                maxLines: 2, // Limit lines for brevity
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            // Description (limited lines, expandable on tap maybe in future)
+            if (widget.job.description.isNotEmpty)
+              Expanded( // Use Expanded for description to take available space
+                flex: 3, // Give more flex to description
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("✨ Why You Matched ✨", style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSecondaryContainer)),
-                    const SizedBox(height: 6),
-                    Text("• Matched based on your Flutter experience (Example)", style: textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSecondaryContainer)),
-                    Text("✅ Skills: Dart, UI/UX (Example)", style: textTheme.bodyMedium?.copyWith(color: Colors.green[700])),
-                    Text("⚠️ Consider: Firebase (Example)", style: textTheme.bodyMedium?.copyWith(color: Colors.orange[700])),
+                    Text(
+                      'Description:',
+                      style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: SingleChildScrollView( // Make description scrollable if it overflows
+                        child: Text(
+                          widget.job.description,
+                          style: textTheme.bodySmall?.copyWith(fontSize: 13), // Slightly smaller for more text
+                        ),
+                      ),
+                    )
                   ],
-                ),
+                )
               ),
-            ],
-          ),
+            if (widget.job.description.isNotEmpty) const SizedBox(height: 16),
+
+            // "Why You Matched" Section
+            Container(
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceVariant.withOpacity(0.7), // Use a theme color
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colorScheme.outline.withOpacity(0.5), width: 1)
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        "✨ Why You Might Match ",
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (_matchPercentage != null && _matchPercentage != "N/A" && !_isMatchingLoading)
+                        Text(
+                          "($_matchPercentage)",
+                           style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.primary, // Highlight percentage
+                           )
+                        ),
+                      const Spacer(),
+                       IconButton(
+                        icon: Icon(Icons.refresh, size: 20),
+                        onPressed: _isMatchingLoading ? null : _fetchJobMatchDetails,
+                        tooltip: "Refresh Match Analysis",
+                       )
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (_isMatchingLoading)
+                    const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator(strokeWidth: 2)))
+                  else if (_matchError != null)
+                    Text(_matchError!, style: TextStyle(color: colorScheme.error))
+                  else if (_matchReasoning != null)
+                    MarkdownBody(
+                        data: _matchReasoning!,
+                        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                          p: textTheme.bodyMedium?.copyWith(fontSize: 14, color: colorScheme.onSurfaceVariant),
+                          listBullet: textTheme.bodyMedium?.copyWith(fontSize: 14, color: colorScheme.onSurfaceVariant),
+                        ),
+                      )
+                  else
+                    Text("No match information available.", style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
