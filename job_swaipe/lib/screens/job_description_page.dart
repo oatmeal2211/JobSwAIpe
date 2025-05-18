@@ -57,6 +57,7 @@ Important notes:
 1. The resume data may be in either legacy format with predefined sections OR a new flexible format where sections are in an array
 2. If the resume uses the new format, it will have a "sections" array where each section has "name" and "content" properties
 3. Analyze each section of the resume against the job requirements regardless of the format
+4. If there are job requirements that are not present in the resume, make sure to mention them in the "missing_information" section and suggest how to add them
 
 Please structure your JSON output as follows:
 {
@@ -136,10 +137,13 @@ Ensure the final output is ONLY the JSON object itself, without any surrounding 
           if (message != null && message['content'] != null) {
             final markdownResult = message['content'].toString();
             if (mounted) {
-              Navigator.pushReplacement(
+              Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => JobMatchResultPage(jsonResult: markdownResult),
+                  builder: (context) => JobMatchResultPage(
+                    jsonResult: markdownResult,
+                    originalResumeJson: widget.resumeJson,
+                  ),
                 ),
               );
             }

@@ -142,7 +142,7 @@ class JobSwAIpeApp extends StatelessWidget {
         '/review_resume': (context) => const ReviewResumePage(),
         '/resume_result': (context) => const ResumeResultPage(jsonResult: ''),
         '/job_description': (context) => const JobDescriptionPage(resumeJson: ''),
-        '/job_match_result': (context) => const JobMatchResultPage(jsonResult: ''),
+        '/job_match_result': (context) => const JobMatchResultPage(jsonResult: '', originalResumeJson: ''),
       },
     );
   }
