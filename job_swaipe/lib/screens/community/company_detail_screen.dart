@@ -196,52 +196,30 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> with SingleTi
                     _buildQATab(),
                   ],
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Show options based on the current tab
-          if (_tabController.index == 1) {
-            _navigateToWriteReview();
-          } else if (_tabController.index == 2) {
-            _navigateToAskQuestion();
-          } else {
-            showModalBottomSheet(
-              context: context,
-              builder: (BuildContext context) {
-                return SafeArea(
-                  child: Wrap(
-                    children: <Widget>[
-                      ListTile(
-                        leading: const Icon(Icons.rate_review),
-                        title: const Text('Write Review'),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _navigateToWriteReview();
-                        },
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.question_answer),
-                        title: const Text('Ask a Question'),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _navigateToAskQuestion();
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          }
-        },
-        child: Icon(
-          _tabController.index == 1
-              ? Icons.rate_review
-              : _tabController.index == 2
-                  ? Icons.question_answer
-                  : Icons.add,
-        ),
-      ),
+      floatingActionButton: _buildFloatingActionButton(),
     );
+  }
+  
+  Widget _buildFloatingActionButton() {
+    // Determine which FAB to show based on the current tab
+    switch (_tabController.index) {
+      case 1: // Reviews tab
+        return FloatingActionButton(
+          onPressed: _navigateToWriteReview,
+          tooltip: 'Write a Review',
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          child: const Icon(Icons.rate_review),
+        );
+      case 2: // Q&A tab
+        return FloatingActionButton(
+          onPressed: _navigateToAskQuestion,
+          tooltip: 'Ask a Question',
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          child: const Icon(Icons.question_answer),
+        );
+      default: // Overview tab or any other
+        return const SizedBox.shrink(); // No FAB
+    }
   }
   
   Widget _buildOverviewTab() {
@@ -906,10 +884,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> with SingleTi
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () {
-                  // Would implement logic to add answer
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Add answer functionality to be implemented')),
-                  );
+                  _showAddAnswerDialog(context, question);
                 },
                 child: const Text('Add Answer'),
               ),
@@ -1307,5 +1282,180 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> with SingleTi
     if (rating >= 3.0) return 'Average Workplace';
     if (rating >= 2.0) return 'Below Average Workplace';
     return 'Poor Workplace';
+  }
+
+  void _showAddAnswerDialog(BuildContext context, CompanyQuestion question) {
+    final TextEditingController answerController = TextEditingController();
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+    bool isAnonymous = false;
+    bool isSubmitting = false;
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Add Answer'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: answerController,
+                      maxLines: 5,
+                      decoration: const InputDecoration(
+                        hintText: 'Write your answer here...',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter an answer';
+                        }
+                        if (value.length < 10) {
+                          return 'Answer must be at least 10 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: isAnonymous,
+                          onChanged: (value) {
+                            setState(() {
+                              isAnonymous = value ?? false;
+                            });
+                          },
+                        ),
+                        const Text('Post anonymously'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting 
+                      ? null 
+                      : () async {
+                          if (formKey.currentState?.validate() ?? false) {
+                            setState(() {
+                              isSubmitting = true;
+                            });
+                            
+                            try {
+                              final currentUser = _authService.getCurrentUser();
+                              if (currentUser == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('You must be logged in to post an answer')),
+                                );
+                                Navigator.of(dialogContext).pop();
+                                return;
+                              }
+                              
+                              // Get user's display name from Firestore
+                              String? userDisplayName;
+                              if (!isAnonymous) {
+                                final userDoc = await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(currentUser.uid)
+                                    .get();
+                                
+                                if (userDoc.exists) {
+                                  final userData = userDoc.data();
+                                  userDisplayName = userData?['displayName'] ?? 'Anonymous';
+                                } else {
+                                  userDisplayName = 'Anonymous';
+                                }
+                              }
+                              
+                              // Create answer document
+                              final answer = CompanyAnswer(
+                                id: '', // Will be set by Firestore
+                                questionId: question.id,
+                                answer: answerController.text.trim(),
+                                userId: isAnonymous ? null : currentUser.uid,
+                                userDisplayName: isAnonymous ? 'Anonymous' : userDisplayName ?? 'Anonymous',
+                                isAnonymous: isAnonymous,
+                                createdAt: DateTime.now(),
+                                upvotes: 0,
+                                downvotes: 0,
+                              );
+                              
+                              // Add to Firestore
+                              final docRef = await FirebaseFirestore.instance
+                                  .collection('company_answers')
+                                  .add({
+                                'questionId': answer.questionId,
+                                'answer': answer.answer,
+                                'userId': answer.userId,
+                                'userDisplayName': answer.userDisplayName,
+                                'isAnonymous': answer.isAnonymous,
+                                'createdAt': answer.createdAt,
+                                'upvotes': answer.upvotes,
+                                'downvotes': answer.downvotes,
+                              });
+                              
+                              // Update the question with new answer count
+                              await FirebaseFirestore.instance
+                                  .collection('company_questions')
+                                  .doc(question.id)
+                                  .update({
+                                'answerCount': FieldValue.increment(1),
+                                'lastAnswerAt': DateTime.now(),
+                              });
+                              
+                              // Update local data
+                              setState(() {
+                                final newAnswer = answer.copyWith(id: docRef.id);
+                                question.answers.add(newAnswer);
+                                question.answerCount++;
+                                
+                                // Sort questions in state to update UI
+                                _questions = [..._questions]; // Create a new list to trigger rebuild
+                              });
+                              
+                              // Reload data to get fresh content
+                              _loadCompanyData();
+                              
+                              // Show success message
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Answer posted successfully')),
+                              );
+                              
+                              Navigator.of(dialogContext).pop();
+                            } catch (e) {
+                              print('Error adding answer: $e');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to post answer: $e')),
+                              );
+                              setState(() {
+                                isSubmitting = false;
+                              });
+                            }
+                          }
+                        },
+                  child: isSubmitting 
+                      ? const SizedBox(
+                          width: 20, 
+                          height: 20, 
+                          child: CircularProgressIndicator(strokeWidth: 2)
+                        )
+                      : const Text('Post Answer'),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
   }
 } 
