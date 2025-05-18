@@ -8,6 +8,7 @@ import 'package:job_swaipe/screens/review_resume_page.dart';
 import 'package:job_swaipe/screens/resume_result_page.dart';
 import 'package:job_swaipe/screens/job_description_page.dart';
 import 'package:job_swaipe/screens/job_match_result_page.dart';
+import 'package:job_swaipe/screens/explore/my_learning_screen.dart';
 import 'package:job_swaipe/services/auth_service.dart';
 import 'package:job_swaipe/firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -143,6 +144,7 @@ class JobSwAIpeApp extends StatelessWidget {
         '/resume_result': (context) => const ResumeResultPage(jsonResult: ''),
         '/job_description': (context) => const JobDescriptionPage(resumeJson: ''),
         '/job_match_result': (context) => const JobMatchResultPage(jsonResult: ''),
+        '/my-learning': (context) => const MyLearningScreen(),
       },
     );
   }
