@@ -130,7 +130,7 @@ Ensure the final output is ONLY the JSON object itself, without any surrounding 
     ;
 
     final Map<String, dynamic> payload = {
-      'model': 'qwen-vl-max', 
+      'model': 'qwen-vl-max-latest', 
       'messages': [
         {
           'role': 'user',
@@ -165,7 +165,29 @@ Ensure the final output is ONLY the JSON object itself, without any surrounding 
       if (result['choices'] != null && result['choices'].isNotEmpty) {
         final message = result['choices'][0]['message'];
         if (message != null && message['content'] != null) {
-          return message['content'].toString(); // This should be the JSON string
+          final content = message['content'].toString();
+          
+          // Clean up any markdown code blocks or additional text around JSON
+          final jsonPattern = RegExp(r'```(?:json)?([\s\S]*?)```|(\{[\s\S]*\})');
+          final match = jsonPattern.firstMatch(content);
+          
+          if (match != null) {
+            // Extract either from code block or direct JSON object
+            final extractedJson = (match.group(1) ?? match.group(2))?.trim();
+            if (extractedJson != null) {
+              // Validate it's parseable JSON before returning
+              try {
+                jsonDecode(extractedJson); // Just to test if it parses correctly
+                return extractedJson;
+              } catch (e) {
+                print('Extracted JSON is not valid: $e');
+                // Fall back to the original content if extracted JSON isn't valid
+              }
+            }
+          }
+          
+          // If we couldn't extract valid JSON with the regex, return the original content
+          return content;
         }
       }
       throw Exception('Failed to parse AI model response structure.');
@@ -224,53 +246,81 @@ Ensure the final output is ONLY the JSON object itself, without any surrounding 
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Review Your Resume'),
+        title: const Text(
+          'Review Your Resume',
+          style: TextStyle(color: Colors.blue),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Colors.blue),
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              const Text(
-                'Choose how to submit your resume:',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              'Submit Your Resume',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue[800],
               ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.picture_as_pdf, size: 28),
-                label: const Text('Upload PDF Resume'),
-                onPressed: () => _uploadPdf(context),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Upload a PDF or take a photo of your document to get started.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 48),
+            ElevatedButton.icon(
+              icon: Icon(Icons.picture_as_pdf, size: 28, color: Colors.white),
+              label: const Text('Upload PDF Resume'),
+              onPressed: () => _uploadPdf(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 3,
               ),
-              const SizedBox(height: 24),
-              const Row(
-                children: <Widget>[
-                  Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text('OR', style: TextStyle(fontSize: 16)),
-                  ),
-                  Expanded(child: Divider()),
-                ],
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.camera_alt, size: 28),
-                label: const Text('Take Photo of Resume'),
-                onPressed: () => _takePhoto(context),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: <Widget>[
+                Expanded(child: Divider(color: Colors.grey[400])),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text('OR', style: TextStyle(fontSize: 16, color: Colors.grey[700], fontWeight: FontWeight.w500)),
                 ),
+                Expanded(child: Divider(color: Colors.grey[400])),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              icon: Icon(Icons.camera_alt, size: 28, color: Colors.white),
+              label: const Text('Take Photo of Resume'),
+              onPressed: () => _takePhoto(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 3,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 48),
+          ],
         ),
       ),
     );

@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'dart:convert'; // For jsonDecode
 import 'package:job_swaipe/screens/explore/explore_screen.dart';
+import './resume_editor_page.dart'; // Import ResumeEditorPage
 
 class JobMatchResultPage extends StatelessWidget {
   final String jsonResult; // Changed from markdownResult
+  final String originalResumeJson; // Added to hold the original OCR resume data
 
-  const JobMatchResultPage({super.key, required this.jsonResult}); // Updated constructor
+  const JobMatchResultPage({
+    super.key, 
+    required this.jsonResult, 
+    required this.originalResumeJson // Added to constructor
+  }); // Updated constructor
 
   Widget _buildSectionTitle(BuildContext context, String title, {bool isConclusion = false}) {
     return Padding(
@@ -125,6 +131,27 @@ class JobMatchResultPage extends StatelessWidget {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_document),
+            tooltip: 'Edit Resume',
+            onPressed: () {
+              // Extract the original resume JSON from the analysisData if it's nested
+              // Assuming the original resume OCR output is available or can be passed
+              // For now, let's assume jsonResult IS the resume JSON for simplicity in this step.
+              // If it's nested, we'll need to adjust how it's passed.
+              // The user's summary implies `jsonResult` from the previous step is the resume data.
+              final resumeJsonForEditor = originalResumeJson; // Use the original resume JSON
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ResumeEditorPage(resumeJson: resumeJsonForEditor),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: errorMessage.isNotEmpty
           ? Center(child: Padding(padding: const EdgeInsets.all(16.0), child: Text(errorMessage, style: const TextStyle(color: Colors.red))))
