@@ -387,9 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile button clicked! Implement navigation.')),
-              );
+              Navigator.pushNamed(context, '/profile');
             },
           ),
           IconButton(
