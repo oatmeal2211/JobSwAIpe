@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert'; // For jsonDecode
+import 'package:job_swaipe/screens/explore/explore_screen.dart';
 import './resume_editor_page.dart'; // Import ResumeEditorPage
 
 class JobMatchResultPage extends StatelessWidget {
@@ -169,6 +170,31 @@ class JobMatchResultPage extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 16, fontStyle: FontStyle.italic),
                     ),
                   ),
+                  
+                  // Add button to explore skills
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // Navigate to ExploreScreen with resume and job data
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ExploreScreen(
+                              resumeJson: jsonResult,
+                              jobJson: jsonEncode(analysisData),
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.school),
+                      label: const Text('EXPLORE SKILL COURSES'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      ),
+                    ),
+                  ),
+                  
                   const Divider(height: 32, thickness: 1),
                   _buildSectionTitle(context, 'Detailed Section Analysis'),
                   if (sectionAnalysis.isNotEmpty)

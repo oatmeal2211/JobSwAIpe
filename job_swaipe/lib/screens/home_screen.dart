@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:job_swaipe/services/auth_service.dart';
 import 'package:job_swaipe/screens/review_resume_page.dart';
 import 'package:job_swaipe/screens/community/community_screen.dart';
+import 'package:job_swaipe/screens/explore/explore_screen.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -70,12 +71,14 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   bool _showTutorialOverlay = false;
 
+
   List<Widget> _buildPages() {
     return <Widget>[
       _buildJobSwipeView(),
       const ReviewResumePage(),
-      ComingSoonPage(pageName: 'Explore'),
+      ExploreScreen(), // Navigate to ExploreScreen
       CommunityScreen(),
+      
     ];
   }
 
