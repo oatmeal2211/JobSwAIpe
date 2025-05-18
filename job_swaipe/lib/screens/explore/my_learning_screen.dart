@@ -444,7 +444,9 @@ class _MyLearningScreenState extends State<MyLearningScreen> with TickerProvider
                   final index = entry.key;
                   final course = entry.value;
                   final isEnrolled = path.userEnrolledCourses.contains(course.id);
-                  final canEnroll = index == 0 || path.userEnrolledCourses.contains(path.courses[index - 1].id);
+                  final canEnroll = index == 0 || 
+                      (path.userEnrolledCourses.contains(path.courses[index - 1].id) && 
+                      path.courses[index - 1].courseProgress >= 100);
                   
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
@@ -460,7 +462,7 @@ class _MyLearningScreenState extends State<MyLearningScreen> with TickerProvider
                                 radius: 16,
                                 backgroundColor: isEnrolled 
                                     ? (course.courseProgress == 100 ? Colors.green : Theme.of(context).colorScheme.primary) 
-                                    : Colors.grey[400],
+                                    : (canEnroll ? Colors.amber : Colors.grey[400]),
                                 child: isEnrolled 
                                     ? (course.courseProgress == 100 
                                         ? const Icon(Icons.check, color: Colors.white, size: 16)
@@ -476,7 +478,7 @@ class _MyLearningScreenState extends State<MyLearningScreen> with TickerProvider
                                       course.title,
                                       style: TextStyle(
                                         fontWeight: isEnrolled ? FontWeight.bold : FontWeight.normal,
-                                        color: isEnrolled ? null : Colors.grey[600],
+                                        color: isEnrolled ? null : (canEnroll ? Colors.black87 : Colors.grey[600]),
                                       ),
                                     ),
                                     const SizedBox(height: 2),
@@ -550,6 +552,13 @@ class _MyLearningScreenState extends State<MyLearningScreen> with TickerProvider
                                 onPressed: () async {
                                   await _courseService.enrollInCourse(course.id);
                                   _loadEnrollments();
+                                  
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Enrolled in "${course.title}"'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
                                 },
                                 child: const Text('START COURSE'),
                               ),
@@ -577,7 +586,7 @@ class _MyLearningScreenState extends State<MyLearningScreen> with TickerProvider
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       // Find the next course to continue or the first course if none started
                       final nextCourseIndex = path.courses.indexWhere((course) {
                         final isEnrolled = path.userEnrolledCourses.contains(course.id);
@@ -585,9 +594,10 @@ class _MyLearningScreenState extends State<MyLearningScreen> with TickerProvider
                       });
                       
                       if (nextCourseIndex >= 0) {
+                        // Continue an existing course
                         final nextCourse = path.courses[nextCourseIndex];
                         final newProgress = (nextCourse.courseProgress + 25).clamp(0, 100);
-                        _updateCourseProgress(nextCourse, newProgress);
+                        await _updateCourseProgress(nextCourse, newProgress);
                         
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -595,11 +605,58 @@ class _MyLearningScreenState extends State<MyLearningScreen> with TickerProvider
                             backgroundColor: Colors.green,
                           ),
                         );
-                      } else if (path.userEnrolledCourses.isEmpty && path.courses.isNotEmpty) {
-                        // Start the first course
-                        _courseService.enrollInCourse(path.courses.first.id).then((_) {
-                          _loadEnrollments();
-                        });
+                      } else {
+                        // Try to enroll in the next course in the path
+                        final enrolled = await _courseService.enrollInNextPathCourse(path.id);
+                        await _loadEnrollments();
+                        
+                        if (enrolled) {
+                          // Find which course was enrolled
+                          final paths = await _courseService.getEnrolledLearningPaths();
+                          final updatedPathIndex = paths.indexWhere((p) => p.id == path.id);
+                          
+                          if (updatedPathIndex >= 0) {
+                            final updatedPath = paths[updatedPathIndex];
+                            final newCourses = updatedPath.userEnrolledCourses
+                                .where((id) => !path.userEnrolledCourses.contains(id))
+                                .toList();
+                            
+                            if (newCourses.isNotEmpty) {
+                              int newCourseIndex = -1;
+                              for (int i = 0; i < updatedPath.courses.length; i++) {
+                                if (newCourses.contains(updatedPath.courses[i].id)) {
+                                  newCourseIndex = i;
+                                  break;
+                                }
+                              }
+                              
+                              if (newCourseIndex >= 0) {
+                                final newCourse = updatedPath.courses[newCourseIndex];
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Started new course: "${newCourse.title}"'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                return;
+                              }
+                            }
+                          }
+                          
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Started next course in path'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } else {
+                          // All courses completed or no more courses available
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('All courses in this path are completed or already enrolled!'),
+                            ),
+                          );
+                        }
                       }
                     },
                     icon: const Icon(Icons.play_arrow),

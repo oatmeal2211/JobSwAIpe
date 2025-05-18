@@ -214,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 8.0),
                 child: CardSwiper(
                   controller: _swiperController,
                   cardsCount: _jobListings.length,
@@ -222,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onUndo: _onUndo,
                   numberOfCardsDisplayed: _jobListings.length < 3 ? _jobListings.length : 3,
                   backCardOffset: const Offset(20, 20),
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 50.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                   cardBuilder: (
                     context,
                     index,
@@ -230,20 +230,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     verticalThresholdPercentage,
                   ) {
                     return SizedBox(
-                      child: JobCard(job: _jobListings[index]),
+                      child: JobCard(
+                        key: ValueKey('job_card_${_jobListings[index].id}'),
+                        job: _jobListings[index]
+                      ),
                     );
                   },
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+            Container(
+              margin: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   FloatingActionButton(
                     heroTag: 'undo_swipe',
                     mini: true,
+                    elevation: 4,
                     onPressed: () {
                        _swiperController.undo();
                        if (_showTutorialOverlay) _markTutorialAsSeen();
@@ -254,6 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   FloatingActionButton(
                     heroTag: 'swipe_left_button',
+                    elevation: 4,
                     onPressed: () {
                       _swiperController.swipe(CardSwiperDirection.left);
                       if (_showTutorialOverlay) _markTutorialAsSeen();
@@ -263,6 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   FloatingActionButton(
                     heroTag: 'swipe_right_button',
+                    elevation: 4,
                     onPressed: () {
                       _swiperController.swipe(CardSwiperDirection.right);
                        if (_showTutorialOverlay) _markTutorialAsSeen();
@@ -273,6 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   FloatingActionButton(
                     heroTag: 'smart_filters',
                     mini: true,
+                    elevation: 4,
                     onPressed: _showSmartFilters,
                     backgroundColor: Colors.blueAccent,
                     child: const Icon(Icons.filter_list, color: Colors.white),
@@ -282,7 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
+              padding: EdgeInsets.symmetric(vertical: 4.0),
               child: Text("✨ Daily AI Job Drop (Coming Soon!) ✨", style: TextStyle(fontStyle: FontStyle.italic)),
             )
           ],
@@ -621,11 +629,29 @@ class _JobCardState extends State<JobCard> {
   String? _matchReasoning;
   bool _isMatchingLoading = true;
   String? _matchError;
+  bool _showFullBenefits = false;
 
   @override
   void initState() {
     super.initState();
+    // Fetch match details when the card is created
     _fetchJobMatchDetails();
+  }
+  
+  @override
+  void didUpdateWidget(JobCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the job changed, fetch new match details
+    if (oldWidget.job.id != widget.job.id) {
+      _fetchJobMatchDetails();
+      _showFullBenefits = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    // Clean up any resources if needed
+    super.dispose();
   }
 
   Future<void> _fetchJobMatchDetails() async {
@@ -663,6 +689,16 @@ class _JobCardState extends State<JobCard> {
         return;
       }
 
+      // Create a simplified job JSON with only the necessary details
+      final jobJson = jsonEncode({
+        'title': widget.job.title,
+        'company': widget.job.company,
+        'description': widget.job.description,
+        'location': widget.job.location,
+        'salary': widget.job.salary,
+        'benefits': widget.job.benefits ?? 'Not specified',
+        'job_type': widget.job.jobType ?? 'Not specified',
+      });
 
       final apiKey = dotenv.env['DASHSCOPE_API_KEY'];
       if (apiKey == null) {
@@ -676,15 +712,9 @@ $resumeJsonString
 </resume_json>
 
 And the following job details:
-<job_details>
-Title: ${widget.job.title}
-Company: ${widget.job.company}
-Description: ${widget.job.description}
-Location: ${widget.job.location}
-Salary: ${widget.job.salary}
-Benefits: ${widget.job.benefits ?? 'Not specified'}
-Job Type: ${widget.job.jobType ?? 'Not specified'}
-</job_details>
+<job_json>
+$jobJson
+</job_json>
 
 Please perform the following:
 1. Calculate a match percentage (e.g., "85%").
@@ -715,11 +745,19 @@ Please perform the following:
         final responseBody = jsonDecode(utf8.decode(response.bodyBytes));
         if (responseBody['choices'] != null && responseBody['choices'].isNotEmpty) {
           final content = responseBody['choices'][0]['message']['content'] as String;
-          final lines = content.split('\\n');
+          
+          // Split by actual newline character, not the string '\n'
+          final lines = content.split('\n');
+          
           if (mounted) {
             setState(() {
               _matchPercentage = lines.isNotEmpty ? lines[0].trim() : "N/A";
-              _matchReasoning = lines.length > 1 ? lines.sublist(1).join('\\n').trim() : "No detailed explanation provided.";
+              
+              // Join the remaining lines with proper newlines for markdown
+              _matchReasoning = lines.length > 1 
+                  ? lines.sublist(1).join('\n').trim() 
+                  : "No detailed explanation provided.";
+              
               _isMatchingLoading = false;
             });
           }
@@ -734,8 +772,8 @@ Please perform the following:
       print('Error fetching job match details: $e');
       if (mounted) {
         setState(() {
-          _matchError = 'Error: Could not fetch match insights. $e';
-          _matchReasoning = 'Could not load match insights at this time.';
+          _matchError = 'Error: Could not fetch match insights.';
+          _matchReasoning = null;
           _isMatchingLoading = false;
         });
       }
@@ -759,205 +797,326 @@ Please perform the following:
 
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // Slightly more rounded
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.symmetric(vertical: 8.0), // Add some vertical margin
-      child: Padding(
-        padding: const EdgeInsets.all(16.0), // Increased padding
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Job Title
-            Text(
-              widget.job.title,
-              style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-
-            // Company and Location
-            if (widget.job.company.isNotEmpty || widget.job.location.isNotEmpty)
-              Row(
-                children: [
-                  if (widget.job.company.isNotEmpty)
-                    Icon(Icons.business, size: 16, color: textTheme.bodySmall?.color),
-                  if (widget.job.company.isNotEmpty)
-                    const SizedBox(width: 4),
-                  if (widget.job.company.isNotEmpty)
-                    Expanded(
-                      child: Text(
-                        widget.job.company,
-                        style: textTheme.titleMedium,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  if (widget.job.company.isNotEmpty && widget.job.location.isNotEmpty)
-                     Text(" • ", style: textTheme.titleSmall),
-                  if (widget.job.location.isNotEmpty)
-                    Icon(Icons.location_on, size: 16, color: textTheme.bodySmall?.color),
-                  if (widget.job.location.isNotEmpty)
-                    const SizedBox(width: 4),
-                  if (widget.job.location.isNotEmpty)
-                    Expanded(
-                      child: Text(
-                        widget.job.location,
-                        style: textTheme.titleSmall?.copyWith(color: Colors.grey[700]),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-              ),
-            const SizedBox(height: 8),
-
-            // Salary and Job Type
-            if (widget.job.salary.isNotEmpty || (widget.job.jobType != null && widget.job.jobType!.isNotEmpty))
-              Row(
-                children: [
-                  if (widget.job.salary.isNotEmpty)
-                    Icon(Icons.attach_money, size: 16, color: Colors.green[700]),
-                  if (widget.job.salary.isNotEmpty)
-                    const SizedBox(width: 4),
-                  if (widget.job.salary.isNotEmpty)
-                    Expanded(
-                      child: Text(
-                        widget.job.salary, // Removed "Salary: " prefix as icon implies it
-                        style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                   if (widget.job.salary.isNotEmpty && (widget.job.jobType != null && widget.job.jobType!.isNotEmpty))
-                     const SizedBox(width: 10),
-                  if (widget.job.jobType != null && widget.job.jobType!.isNotEmpty)
-                    Icon(Icons.work_outline, size: 16, color: textTheme.bodySmall?.color),
-                  if (widget.job.jobType != null && widget.job.jobType!.isNotEmpty)
-                    const SizedBox(width: 4),
-                  if (widget.job.jobType != null && widget.job.jobType!.isNotEmpty)
-                    Expanded(
-                      child: Text(
-                        widget.job.jobType!, // Removed "Type: " prefix
-                        style: textTheme.bodyMedium,
-                        textAlign: widget.job.salary.isNotEmpty ? TextAlign.end : TextAlign.start,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-              ),
-            if (widget.job.salary.isNotEmpty || (widget.job.jobType != null && widget.job.jobType!.isNotEmpty))
-              const SizedBox(height: 8),
-
-            // Posted Date
-            if (widget.job.postedDate != null && widget.job.postedDate!.isNotEmpty) ...[
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 14, color: textTheme.bodySmall?.color),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Posted: ${_formatPostedDate(widget.job.postedDate)}',
-                    style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-            ],
-
-            // Benefits (collapsible or summarized if too long)
-            if (widget.job.benefits != null && widget.job.benefits!.isNotEmpty) ...[
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      child: SizedBox(
+        height: 550, // Slightly reduced height to fit better with buttons
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Job Title
               Text(
-                'Benefits:',
-                style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.job.benefits!,
-                style: textTheme.bodySmall,
-                maxLines: 2, // Limit lines for brevity
+                widget.job.title,
+                style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 10),
-            ],
+              const SizedBox(height: 8),
 
-            // Description (limited lines, expandable on tap maybe in future)
-            if (widget.job.description.isNotEmpty)
-              Expanded( // Use Expanded for description to take available space
-                flex: 3, // Give more flex to description
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              // Company and Location
+              if (widget.job.company.isNotEmpty || widget.job.location.isNotEmpty)
+                Row(
+                  children: [
+                    if (widget.job.company.isNotEmpty)
+                      Icon(Icons.business, size: 16, color: textTheme.bodySmall?.color),
+                    if (widget.job.company.isNotEmpty)
+                      const SizedBox(width: 4),
+                    if (widget.job.company.isNotEmpty)
+                      Expanded(
+                        child: Text(
+                          widget.job.company,
+                          style: textTheme.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    if (widget.job.company.isNotEmpty && widget.job.location.isNotEmpty)
+                       Text(" • ", style: textTheme.titleSmall),
+                    if (widget.job.location.isNotEmpty)
+                      Icon(Icons.location_on, size: 16, color: textTheme.bodySmall?.color),
+                    if (widget.job.location.isNotEmpty)
+                      const SizedBox(width: 4),
+                    if (widget.job.location.isNotEmpty)
+                      Expanded(
+                        child: Text(
+                          widget.job.location,
+                          style: textTheme.titleSmall?.copyWith(color: Colors.grey[700]),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 8),
+
+              // Salary and Job Type
+              if (widget.job.salary.isNotEmpty || (widget.job.jobType != null && widget.job.jobType!.isNotEmpty))
+                Row(
+                  children: [
+                    if (widget.job.salary.isNotEmpty)
+                      Icon(Icons.attach_money, size: 16, color: Colors.green[700]),
+                    if (widget.job.salary.isNotEmpty)
+                      const SizedBox(width: 4),
+                    if (widget.job.salary.isNotEmpty)
+                      Expanded(
+                        child: Text(
+                          widget.job.salary,
+                          style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                     if (widget.job.salary.isNotEmpty && (widget.job.jobType != null && widget.job.jobType!.isNotEmpty))
+                       const SizedBox(width: 10),
+                    if (widget.job.jobType != null && widget.job.jobType!.isNotEmpty)
+                      Icon(Icons.work_outline, size: 16, color: textTheme.bodySmall?.color),
+                    if (widget.job.jobType != null && widget.job.jobType!.isNotEmpty)
+                      const SizedBox(width: 4),
+                    if (widget.job.jobType != null && widget.job.jobType!.isNotEmpty)
+                      Expanded(
+                        child: Text(
+                          widget.job.jobType!,
+                          style: textTheme.bodyMedium,
+                          textAlign: widget.job.salary.isNotEmpty ? TextAlign.end : TextAlign.start,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
+              if (widget.job.salary.isNotEmpty || (widget.job.jobType != null && widget.job.jobType!.isNotEmpty))
+                const SizedBox(height: 8),
+
+              // Posted Date
+              if (widget.job.postedDate != null && widget.job.postedDate!.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 14, color: textTheme.bodySmall?.color),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Posted: ${_formatPostedDate(widget.job.postedDate)}',
+                      style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              // Benefits (collapsible or summarized if too long)
+              if (widget.job.benefits != null && widget.job.benefits!.isNotEmpty) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Description:',
+                      'Benefits:',
                       style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 4),
-                    Expanded(
-                      child: SingleChildScrollView( // Make description scrollable if it overflows
-                        child: Text(
-                          widget.job.description,
-                          style: textTheme.bodySmall?.copyWith(fontSize: 13), // Slightly smaller for more text
+                    if (widget.job.benefits!.length > 80) // Only show toggle if benefits text is long
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _showFullBenefits = !_showFullBenefits;
+                          });
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _showFullBenefits ? "Show Less" : "Show More",
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              _showFullBenefits ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                              size: 16,
+                              color: colorScheme.primary,
+                            ),
+                          ],
                         ),
                       ),
-                    )
                   ],
-                )
-              ),
-            if (widget.job.description.isNotEmpty) const SizedBox(height: 16),
-
-            // "Why You Matched" Section
-            Container(
-              padding: const EdgeInsets.all(12.0),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant.withOpacity(0.7), // Use a theme color
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colorScheme.outline.withOpacity(0.5), width: 1)
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        "✨ Why You Might Match ",
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                ),
+                const SizedBox(height: 4),
+                if (_showFullBenefits)
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 80),
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceVariant.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: colorScheme.outline.withOpacity(0.2), width: 1),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Text(
+                        widget.job.benefits!,
+                        style: textTheme.bodySmall,
                       ),
-                      if (_matchPercentage != null && _matchPercentage != "N/A" && !_isMatchingLoading)
-                        Text(
-                          "($_matchPercentage)",
-                           style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary, // Highlight percentage
-                           )
+                    ),
+                  )
+                else
+                  Text(
+                    widget.job.benefits!,
+                    style: textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                const SizedBox(height: 8),
+              ],
+
+              // Description section - with fixed height
+              if (widget.job.description.isNotEmpty) ...[
+                Text(
+                  'Description:',
+                  style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  height: _showFullBenefits ? 70 : 100, // Reduce height when benefits are expanded
+                  child: SingleChildScrollView(
+                    child: Text(
+                      widget.job.description,
+                      style: textTheme.bodySmall?.copyWith(fontSize: 13),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // "Why You Matched" Section - This is the last element, no extra spacing needed after it
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceVariant.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colorScheme.outline.withOpacity(0.5), width: 1)
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    "✨ Why You Might Match",
+                                    style: textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (_matchPercentage != null && _matchPercentage != "N/A" && !_isMatchingLoading)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8.0),
+                                    child: Text(
+                                      "($_matchPercentage)",
+                                      style: textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: IconButton(
+                              icon: const Icon(Icons.refresh, size: 20),
+                              onPressed: _isMatchingLoading ? null : _fetchJobMatchDetails,
+                              tooltip: "Refresh Match Analysis",
+                              padding: EdgeInsets.zero,
+                            ),
+                          )
+                        ],
+                      ),
+                      const Divider(),
+                      const SizedBox(height: 4),
+                      if (_isMatchingLoading)
+                        const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 16.0), child: CircularProgressIndicator(strokeWidth: 2)))
+                      else if (_matchError != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text(_matchError!, style: TextStyle(color: colorScheme.error)),
+                        )
+                      else if (_matchReasoning != null)
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: colorScheme.outline.withOpacity(0.2), width: 1),
+                            ),
+                            child: Stack(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 16.0),
+                                  child: SingleChildScrollView(
+                                    child: MarkdownBody(
+                                      data: _matchReasoning!.replaceFirst(RegExp(r'^Reasoning:[\s\n]*', caseSensitive: false), ''),
+                                      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                                        p: textTheme.bodyMedium?.copyWith(fontSize: 14, color: colorScheme.onSurfaceVariant),
+                                        listBullet: textTheme.bodyMedium?.copyWith(fontSize: 14, color: colorScheme.onSurfaceVariant),
+                                        h3: textTheme.titleMedium?.copyWith(fontSize: 16, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
+                                        blockquote: textTheme.bodyMedium?.copyWith(
+                                          fontSize: 14, 
+                                          color: colorScheme.onSurfaceVariant,
+                                          fontStyle: FontStyle.italic,
+                                          decoration: TextDecoration.none,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  left: 0,
+                                  child: Container(
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          colorScheme.surfaceVariant.withOpacity(0.0),
+                                          colorScheme.surfaceVariant.withOpacity(0.9),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.keyboard_arrow_down,
+                                        size: 16,
+                                        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text("No match information available.", style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
                         ),
-                      const Spacer(),
-                       IconButton(
-                        icon: Icon(Icons.refresh, size: 20),
-                        onPressed: _isMatchingLoading ? null : _fetchJobMatchDetails,
-                        tooltip: "Refresh Match Analysis",
-                       )
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  if (_isMatchingLoading)
-                    const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator(strokeWidth: 2)))
-                  else if (_matchError != null)
-                    Text(_matchError!, style: TextStyle(color: colorScheme.error))
-                  else if (_matchReasoning != null)
-                    MarkdownBody(
-                        data: _matchReasoning!,
-                        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                          p: textTheme.bodyMedium?.copyWith(fontSize: 14, color: colorScheme.onSurfaceVariant),
-                          listBullet: textTheme.bodyMedium?.copyWith(fontSize: 14, color: colorScheme.onSurfaceVariant),
-                        ),
-                      )
-                  else
-                    Text("No match information available.", style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

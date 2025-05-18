@@ -102,15 +102,17 @@ class CourseService {
   // Enroll in a course
   Future<bool> enrollInCourse(String courseId) async {
     try {
+      bool wasNewEnrollment = false;
+      
       if (!_enrolledCourseIds.contains(courseId)) {
         _enrolledCourseIds.add(courseId);
         _courseProgress[courseId] = 0;
-        
-        // Save to Firebase
-        await _saveUserEnrollments();
-        return true;
+        wasNewEnrollment = true;
       }
-      return false;
+      
+      // Save to Firebase
+      await _saveUserEnrollments();
+      return wasNewEnrollment;
     } catch (e) {
       print('Error enrolling in course: $e');
       return false;
@@ -802,6 +804,49 @@ class CourseService {
       return false;
     } catch (e) {
       print('Error unenrolling from learning path: $e');
+      return false;
+    }
+  }
+
+  // Enroll in the next course of a learning path
+  Future<bool> enrollInNextPathCourse(String pathId) async {
+    try {
+      // Check if path exists and user is enrolled
+      if (!_enrolledPathIds.contains(pathId)) {
+        return false;
+      }
+      
+      // Get the path details
+      final paths = await getLearningPaths();
+      final pathIndex = paths.indexWhere((p) => p.id == pathId);
+      if (pathIndex < 0) return false;
+      
+      final path = paths[pathIndex];
+      
+      // Find the next course that user is not enrolled in
+      for (int i = 0; i < path.courses.length; i++) {
+        final course = path.courses[i];
+        
+        // If this is the first course or the previous course is completed
+        bool canEnroll = i == 0 || 
+            (_enrolledCourseIds.contains(path.courses[i-1].id) && 
+             (_courseProgress[path.courses[i-1].id] ?? 0) >= 100);
+        
+        if (canEnroll && !_enrolledCourseIds.contains(course.id)) {
+          // Enroll in this course
+          _enrolledCourseIds.add(course.id);
+          _courseProgress[course.id] = 0;
+          
+          // Save to Firebase
+          await _saveUserEnrollments();
+          return true;
+        }
+      }
+      
+      // No new courses to enroll in
+      return false;
+    } catch (e) {
+      print('Error enrolling in next path course: $e');
       return false;
     }
   }
