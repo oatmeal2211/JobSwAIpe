@@ -98,6 +98,7 @@ class CompanyQuestion {
   final DateTime createdAt;
   final String userId;
   final String userDisplayName;
+  int answerCount; // Added answerCount field
 
   CompanyQuestion({
     required this.id,
@@ -108,6 +109,7 @@ class CompanyQuestion {
     required this.createdAt,
     required this.userId,
     required this.userDisplayName,
+    this.answerCount = 0, // Default to 0
   });
 
   factory CompanyQuestion.fromMap(String id, Map<String, dynamic> data) {
@@ -127,6 +129,7 @@ class CompanyQuestion {
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       userId: data['userId'] ?? '',
       userDisplayName: data['userDisplayName'] ?? '',
+      answerCount: data['answerCount'] ?? 0, // Parse answerCount from data
     );
   }
 
@@ -139,46 +142,84 @@ class CompanyQuestion {
       'createdAt': Timestamp.fromDate(createdAt),
       'userId': userId,
       'userDisplayName': userDisplayName,
+      'answerCount': answerCount, // Include answerCount in map
     };
   }
 }
 
 class CompanyAnswer {
   final String id;
+  final String questionId; // Added questionId field
   final String answer;
   final DateTime createdAt;
-  final String userId;
+  final String? userId; // Made nullable for anonymous answers
   final String userDisplayName;
   final bool isAnonymous;
+  final int upvotes; // Added upvotes field
+  final int downvotes; // Added downvotes field
 
   CompanyAnswer({
     required this.id,
+    required this.questionId, // Added to constructor
     required this.answer,
     required this.createdAt,
-    required this.userId,
+    this.userId, // Made nullable
     required this.userDisplayName,
     required this.isAnonymous,
+    this.upvotes = 0, // Default to 0
+    this.downvotes = 0, // Default to 0
   });
 
   factory CompanyAnswer.fromMap(Map<String, dynamic> data) {
     return CompanyAnswer(
       id: data['id'] ?? '',
+      questionId: data['questionId'] ?? '', // Parse questionId
       answer: data['answer'] ?? '',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
-      userId: data['userId'] ?? '',
+      userId: data['userId'], // Keep nullable
       userDisplayName: data['userDisplayName'] ?? '',
       isAnonymous: data['isAnonymous'] ?? false,
+      upvotes: data['upvotes'] ?? 0, // Parse upvotes
+      downvotes: data['downvotes'] ?? 0, // Parse downvotes
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'questionId': questionId, // Include questionId in map
       'answer': answer,
       'createdAt': Timestamp.fromDate(createdAt),
       'userId': userId,
       'userDisplayName': userDisplayName,
       'isAnonymous': isAnonymous,
+      'upvotes': upvotes, // Include upvotes
+      'downvotes': downvotes, // Include downvotes
     };
+  }
+  
+  // Add copyWith method for creating a new instance with modified fields
+  CompanyAnswer copyWith({
+    String? id,
+    String? questionId,
+    String? answer,
+    DateTime? createdAt,
+    String? userId,
+    String? userDisplayName,
+    bool? isAnonymous,
+    int? upvotes,
+    int? downvotes,
+  }) {
+    return CompanyAnswer(
+      id: id ?? this.id,
+      questionId: questionId ?? this.questionId,
+      answer: answer ?? this.answer,
+      createdAt: createdAt ?? this.createdAt,
+      userId: userId ?? this.userId,
+      userDisplayName: userDisplayName ?? this.userDisplayName,
+      isAnonymous: isAnonymous ?? this.isAnonymous,
+      upvotes: upvotes ?? this.upvotes,
+      downvotes: downvotes ?? this.downvotes,
+    );
   }
 } 

@@ -165,7 +165,29 @@ Ensure the final output is ONLY the JSON object itself, without any surrounding 
       if (result['choices'] != null && result['choices'].isNotEmpty) {
         final message = result['choices'][0]['message'];
         if (message != null && message['content'] != null) {
-          return message['content'].toString(); // This should be the JSON string
+          final content = message['content'].toString();
+          
+          // Clean up any markdown code blocks or additional text around JSON
+          final jsonPattern = RegExp(r'```(?:json)?([\s\S]*?)```|(\{[\s\S]*\})');
+          final match = jsonPattern.firstMatch(content);
+          
+          if (match != null) {
+            // Extract either from code block or direct JSON object
+            final extractedJson = (match.group(1) ?? match.group(2))?.trim();
+            if (extractedJson != null) {
+              // Validate it's parseable JSON before returning
+              try {
+                jsonDecode(extractedJson); // Just to test if it parses correctly
+                return extractedJson;
+              } catch (e) {
+                print('Extracted JSON is not valid: $e');
+                // Fall back to the original content if extracted JSON isn't valid
+              }
+            }
+          }
+          
+          // If we couldn't extract valid JSON with the regex, return the original content
+          return content;
         }
       }
       throw Exception('Failed to parse AI model response structure.');
