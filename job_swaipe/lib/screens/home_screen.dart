@@ -7,9 +7,6 @@ import 'package:job_swaipe/screens/community/community_screen.dart';
 import 'package:job_swaipe/screens/explore/explore_screen.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 
 class JobListing {
   final String id;
@@ -616,7 +613,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class JobCard extends StatefulWidget {
+class JobCard extends StatelessWidget {
   final JobListing job;
   const JobCard({super.key, required this.job});
 
@@ -783,10 +780,9 @@ Please perform the following:
   String _formatPostedDate(String? isoDate) {
     if (isoDate == null || isoDate.isEmpty) return 'N/A';
     try {
-      final date = DateTime.parse(isoDate);
-      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      return isoDate.split('T')[0];
     } catch (e) {
-      return isoDate; // return original if parsing fails
+      return isoDate;
     }
   }
 
@@ -897,6 +893,80 @@ Please perform the following:
                       style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
                     ),
                   ],
+    return Container(
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                job.title,
+                style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              if (job.company.isNotEmpty)
+                Text(
+                  job.company,
+                  style: textTheme.titleMedium,
+                ),
+              const SizedBox(height: 3),
+              if (job.location.isNotEmpty)
+                Text(
+                  job.location,
+                  style: textTheme.titleSmall?.copyWith(color: Colors.grey[600]),
+                ),
+              const SizedBox(height: 6),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (job.salary.isNotEmpty)
+                    Flexible(
+                      child: Text(
+                        'Salary: ${job.salary}',
+                        style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  if (job.jobType != null && job.jobType!.isNotEmpty)
+                    Flexible(
+                      child: Text(
+                        'Type: ${job.jobType}',
+                        style: textTheme.bodyMedium,
+                        textAlign: job.salary.isNotEmpty ? TextAlign.end : TextAlign.start,
+                         overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+              ),
+              if (job.salary.isNotEmpty || (job.jobType != null && job.jobType!.isNotEmpty))
+                const SizedBox(height: 6),
+
+              if (job.postedDate != null && job.postedDate!.isNotEmpty) ...[
+                Text(
+                  'Posted: ${_formatPostedDate(job.postedDate)}',
+                  style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                ),
+                const SizedBox(height: 8),
+              ],
+              
+              if (job.benefits != null && job.benefits!.isNotEmpty) ...[
+                Text(
+                  'Benefits:',
+                  style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  job.benefits!,
+                  style: textTheme.bodySmall,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis, 
                 ),
                 const SizedBox(height: 8),
               ],
@@ -1113,6 +1183,49 @@ Please perform the following:
                         ),
                     ],
                   ),
+                ),
+
+              if (job.description.isNotEmpty)
+                Flexible(
+                  flex: 2,
+                  child: Column(
+                     mainAxisSize: MainAxisSize.min,
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                        Text(
+                          'Description:',
+                          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Expanded(
+                           child: SingleChildScrollView(
+                            child: Text(
+                              job.description,
+                              style: textTheme.bodySmall,
+                            ),
+                          ),
+                        )
+                     ],
+                  )
+                ),
+              if (job.description.isNotEmpty) const SizedBox(height: 12), 
+              
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Theme.of(context).colorScheme.secondaryContainer, width: 1.5)
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("✨ Why You Matched ✨", style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSecondaryContainer)),
+                    const SizedBox(height: 6),
+                    Text("• Matched based on your Flutter experience (Example)", style: textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSecondaryContainer)),
+                    Text("✅ Skills: Dart, UI/UX (Example)", style: textTheme.bodyMedium?.copyWith(color: Colors.green[700])),
+                    Text("⚠️ Consider: Firebase (Example)", style: textTheme.bodyMedium?.copyWith(color: Colors.orange[700])),
+                  ],
                 ),
               ),
             ],

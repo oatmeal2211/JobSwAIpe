@@ -1,36 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:convert'; // For jsonDecode
 import './job_description_page.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import shared_preferences
 
 class ResumeResultPage extends StatelessWidget {
   final String jsonResult;
 
   const ResumeResultPage({super.key, required this.jsonResult});
-
-  Future<void> _saveResume(BuildContext context, String resumeJsonToSave) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('saved_resume_json', resumeJsonToSave);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Resume saved successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save resume: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
@@ -203,15 +178,6 @@ class ResumeResultPage extends StatelessWidget {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
         ),
-        actions: [ // Add actions for the AppBar
-          IconButton(
-            icon: const Icon(Icons.save_alt),
-            tooltip: 'Save Resume',
-            onPressed: () {
-              _saveResume(context, jsonResult);
-            },
-          ),
-        ],
       ),
       body: errorMessage.isNotEmpty
           ? Center(child: Padding(padding: const EdgeInsets.all(16.0), child: Text(errorMessage, style: const TextStyle(color: Colors.red))))
