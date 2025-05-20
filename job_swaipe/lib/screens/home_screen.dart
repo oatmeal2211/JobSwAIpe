@@ -7,6 +7,9 @@ import 'package:job_swaipe/screens/community/community_screen.dart';
 import 'package:job_swaipe/screens/explore/explore_screen.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class JobListing {
   final String id;
@@ -613,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class JobCard extends StatelessWidget {
+class JobCard extends StatefulWidget {
   final JobListing job;
   const JobCard({super.key, required this.job});
 
@@ -893,77 +896,17 @@ Please perform the following:
                       style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
                     ),
                   ],
-    return Container(
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                job.title,
-                style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-              if (job.company.isNotEmpty)
-                Text(
-                  job.company,
-                  style: textTheme.titleMedium,
                 ),
-              const SizedBox(height: 3),
-              if (job.location.isNotEmpty)
-                Text(
-                  job.location,
-                  style: textTheme.titleSmall?.copyWith(color: Colors.grey[600]),
-                ),
-              const SizedBox(height: 6),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (job.salary.isNotEmpty)
-                    Flexible(
-                      child: Text(
-                        'Salary: ${job.salary}',
-                        style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  if (job.jobType != null && job.jobType!.isNotEmpty)
-                    Flexible(
-                      child: Text(
-                        'Type: ${job.jobType}',
-                        style: textTheme.bodyMedium,
-                        textAlign: job.salary.isNotEmpty ? TextAlign.end : TextAlign.start,
-                         overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-              ),
-              if (job.salary.isNotEmpty || (job.jobType != null && job.jobType!.isNotEmpty))
-                const SizedBox(height: 6),
-
-              if (job.postedDate != null && job.postedDate!.isNotEmpty) ...[
-                Text(
-                  'Posted: ${_formatPostedDate(job.postedDate)}',
-                  style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                ),
-                const SizedBox(height: 8),
               ],
               
-              if (job.benefits != null && job.benefits!.isNotEmpty) ...[
+              if (widget.job.benefits != null && widget.job.benefits!.isNotEmpty) ...[
                 Text(
                   'Benefits:',
                   style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  job.benefits!,
+                  widget.job.benefits!,
                   style: textTheme.bodySmall,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis, 
@@ -1184,34 +1127,12 @@ Please perform the following:
                     ],
                   ),
                 ),
-
-              if (job.description.isNotEmpty)
-                Flexible(
-                  flex: 2,
-                  child: Column(
-                     mainAxisSize: MainAxisSize.min,
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
-                        Text(
-                          'Description:',
-                          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Expanded(
-                           child: SingleChildScrollView(
-                            child: Text(
-                              job.description,
-                              style: textTheme.bodySmall,
-                            ),
-                          ),
-                        )
-                     ],
-                  )
-                ),
-              if (job.description.isNotEmpty) const SizedBox(height: 12), 
+              ),
               
+              // Add a simple container at the bottom for spacing
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                margin: const EdgeInsets.only(top: 8.0),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(8),
