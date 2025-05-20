@@ -104,10 +104,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               icon: Icon(Icons.route),
               text: 'PATHS',
             ),
-            Tab(
-              icon: Icon(Icons.bookmark),
-              text: 'SAVED',
-            ),
+            
           ],
         ),
       ),
@@ -161,7 +158,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 children: [
                   CourseHubTab(skillGaps: _skillGaps),
                   CareerPathTab(skillGaps: _skillGaps),
-                  _buildSavedTab(),
+                  
                 ],
               ),
             ),
