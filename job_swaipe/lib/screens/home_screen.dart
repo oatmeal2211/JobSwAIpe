@@ -997,7 +997,7 @@ Please perform the following:
                 const SizedBox(height: 12),
               ],
 
-              // "Why You Matched" Section - This is the last element, no extra spacing needed after it
+              // "Why You Might Match" Section - This is the last element, no extra spacing needed after it
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(12.0),
@@ -1126,27 +1126,6 @@ Please perform the following:
                         ),
                     ],
                   ),
-                ),
-              ),
-              
-              // Add a simple container at the bottom for spacing
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
-                margin: const EdgeInsets.only(top: 8.0),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Theme.of(context).colorScheme.secondaryContainer, width: 1.5)
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("✨ Why You Matched ✨", style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSecondaryContainer)),
-                    const SizedBox(height: 6),
-                    Text("• Matched based on your Flutter experience (Example)", style: textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSecondaryContainer)),
-                    Text("✅ Skills: Dart, UI/UX (Example)", style: textTheme.bodyMedium?.copyWith(color: Colors.green[700])),
-                    Text("⚠️ Consider: Firebase (Example)", style: textTheme.bodyMedium?.copyWith(color: Colors.orange[700])),
-                  ],
                 ),
               ),
             ],
